@@ -51,12 +51,8 @@ function TCPLogClient (options) {
   }
 
   function onEntry (entry, index) {
-    advanceHead(index)
-    emit('entry', entry, index)
-  }
-
-  function advanceHead (index) {
     if (index > head) head = index
+    emit('entry', entry, index)
   }
 }
 
