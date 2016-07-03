@@ -51,6 +51,8 @@ function TCPLogClient (options) {
   }
 
   function onEntry (entry, index) {
+    // TODO: Address cases where index is more than head + 1
+    // TODO: Ensure that entry events are emitted in index order
     if (index > head) head = index
     emit('entry', entry, index)
   }
