@@ -1,15 +1,15 @@
 var EventEmitter = require('events').EventEmitter
-var runParallel = require('run-parallel')
-var abs = require('abstract-blob-store')
 var TCPLogClient = require('./')
+var abs = require('abstract-blob-store')
 var devnull = require('dev-null')
 var levelLogs = require('level-logs')
 var levelup = require('levelup')
+var logServerHandler = require('tcp-log-server')
 var memdown = require('memdown')
 var net = require('net')
 var pino = require('pino')
+var runParallel = require('run-parallel')
 var tape = require('tape')
-var logServerHandler = require('tcp-log-server')
 
 tape('start a test server', function (test) {
   withTestServer(function (server, port) {
