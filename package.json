@@ -1,7 +1,7 @@
 {
   "name": "tcp-log-client",
   "description": "sync with tcp-log-servers",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "author": "Kyle E. Mitchell <kyle@kemitchell.com> (https://kemitchell.com/)",
   "dependencies": {
     "reconnect-core": "^1.3.0",
