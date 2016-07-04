@@ -9,6 +9,7 @@ var memdown = require('memdown')
 var net = require('net')
 var pino = require('pino')
 var runParallel = require('run-parallel')
+var streamSet = require('stream-set')
 var tape = require('tape')
 
 tape('start a test server', function (test) {
@@ -16,6 +17,68 @@ tape('start a test server', function (test) {
     test.pass('started a server')
     server.close()
     test.end()
+  })
+})
+
+tape('reconnect', function (test) {
+  withTestServer(function (server, port, sockets) {
+    var client = new TCPLogClient({port: port})
+    client.once('connect', function () {
+      client.write({a: 1}, function (error, index) {
+        test.pass('first callback')
+        test.ifError(error, 'first callback without error')
+        test.equal(index, 1, 'first callback with index')
+        client.once('disconnect', function (error) {
+          test.ifError(error, 'disconnect without error')
+          client.once('reconnect', function () {
+            client.write({b: 2}, function (error, index) {
+              test.pass('second callback')
+              test.ifError(error, 'second callback without error')
+              test.equal(index, 2, 'second callback with index')
+              client.disconnect()
+              server.close()
+              test.end()
+            })
+          })
+        })
+        sockets.forEach(function (socket) { socket.end() })
+      })
+    })
+  })
+})
+
+tape('write on reconnect', function (test) {
+  withTestServer(function (server, port, sockets) {
+    var client = new TCPLogClient({port: port})
+    client.once('connect', function () {
+      var disconnected = false
+      client.once('disconnect', function () {
+        test.pass('disconnected')
+        disconnected = true
+        done()
+      })
+      var reconnected = false
+      client.once('reconnect', function () {
+        test.pass('reconnected')
+        reconnected = true
+        done()
+      })
+      var receivedEntry = false
+      client.once('entry', function (entry) {
+        test.deepEqual(entry, {a: 1}, 'received entry')
+        receivedEntry = true
+        done()
+      })
+      function done () {
+        if (disconnected && reconnected && receivedEntry) {
+          client.disconnect()
+          server.close()
+          test.end()
+        }
+      }
+      client.write({a: 1})
+      sockets.forEach(function (socket) { socket.end() })
+    })
   })
 })
 
@@ -92,10 +155,12 @@ function withTestServer (callback) {
   var log = pino({}, devnull())
   var emitter = new EventEmitter()
   var handler = logServerHandler(log, logs, blobs, emitter)
+  var sockets = streamSet()
   var server = net.createServer()
     .on('connection', handler)
+    .on('connection', function (socket) { sockets.add(socket) })
     .once('close', function () { level.close() })
     .listen(0, function () {
-      callback(server, this.address().port)
+      callback(server, this.address().port, sockets)
     })
 }

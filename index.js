@@ -1,8 +1,9 @@
 var EventEmitter = require('events').EventEmitter
-var uuid = require('uuid').v4
 var duplexJSONStream = require('duplex-json-stream')
 var inherits = require('util').inherits
-var reconnect = require('reconnect-net')
+var net = require('net')
+var reconnect = require('reconnect-core')
+var uuid = require('uuid').v4
 
 module.exports = TCPLogClient
 
@@ -19,9 +20,14 @@ function TCPLogClient (options) {
   var emit = this.emit.bind(this)
   this._timeout = options.timeout || 1000
   var head = 0
+  self._json = false
   var writes = this._writes = {}
 
-  this._reconnect = reconnect(function (stream) {
+  var reconnecter = reconnect(function (options) {
+    return net.connect(options).setKeepAlive(true)
+  })
+  this._reconnect = reconnecter(function (stream) {
+    stream.on('close', function () { self._json = false })
     var json = self._json = duplexJSONStream(stream)
       .on('data', function (message) {
         if ('current' in message) emit('current')
@@ -32,12 +38,19 @@ function TCPLogClient (options) {
         }
       })
     Object.keys(writes).forEach(function (id) {
-      json.write(writeMessage(writes[id].entry, id))
+      if (writes[id].sent === false) {
+        json.write(writeMessage(writes[id].entry, id))
+        writes[id].sent = true
+      }
     })
     json.write({type: 'read', from: head})
   })
     .on('connect', function () { emit('connect') })
     .on('reconnect', function () { emit('reconnect') })
+    .on('disconnect', function (error) {
+      self._json = false
+      emit('disconnect', error)
+    })
     .on('error', function (error) { emit('error', error) })
     .connect(tcpOptions)
 
@@ -64,14 +77,18 @@ TCPLogClient.prototype.write = function (entry, callback) {
   var writes = this._writes
   var id = uuid()
   writes[id] = {
+    sent: false,
     entry: entry,
     callback: callback || false,
     timeout: setTimeout(function () {
-      writes[id].callback(new Error('timeout'))
+      if (callback) callback(new Error('timeout'))
       delete writes[id]
     }, this._timeout)
   }
-  if (this._json) this._json.write(writeMessage(entry, id))
+  if (this._json) {
+    this._json.write(writeMessage(entry, id))
+    writes[id].sent = true
+  }
 }
 
 function writeMessage (entry, id) {
