@@ -15,6 +15,7 @@ function TCPLogClient (options) {
     host: options.host || 'localhost',
     family: options.family || 4
   }
+  var reconnectOptions = options.reconnect || {}
 
   var self = this
   var emit = this.emit.bind(this)
@@ -23,10 +24,9 @@ function TCPLogClient (options) {
   self._json = false
   var writes = this._writes = {}
 
-  var reconnecter = reconnect(function (options) {
+  this._reconnect = reconnect(function (options) {
     return net.connect(options).setKeepAlive(true)
-  })
-  this._reconnect = reconnecter(function (stream) {
+  })(reconnectOptions, function (stream) {
     stream.on('close', function () { self._json = false })
     var json = self._json = duplexJSONStream(stream)
     .on('data', function (message) {
