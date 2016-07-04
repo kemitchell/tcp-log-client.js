@@ -87,13 +87,13 @@ tape('read and write', function (test) {
     var calledBack = false
     var entryEvent = false
     var client = new TCPLogClient({port: port})
-      .on('entry', function (entry, index) {
-        test.pass('entry event')
-        test.deepEqual(entry, {a: 1}, 'event with entry')
-        test.equal(index, 1, 'event with index')
-        entryEvent = true
-        done()
-      })
+    .on('entry', function (entry, index) {
+      test.pass('entry event')
+      test.deepEqual(entry, {a: 1}, 'event with entry')
+      test.equal(index, 1, 'event with index')
+      entryEvent = true
+      done()
+    })
     client.write({a: 1}, function (error, index) {
       test.pass('callback')
       test.ifError(error, 'callback without error')
@@ -124,19 +124,19 @@ tape('read previous writes', function (test) {
       var receivedCurrent = false
       var receivedEntries = false
       var reader = new TCPLogClient({port: port})
-        .once('current', function () {
-          test.pass('current event')
-          receivedCurrent = true
+      .once('current', function () {
+        test.pass('current event')
+        receivedCurrent = true
+        done()
+      })
+      .on('entry', function (entry, index) {
+        received.push(entry)
+        if (received.length === entries.length) {
+          test.deepEqual(received, entries, 'received entries')
+          receivedEntries = true
           done()
-        })
-        .on('entry', function (entry, index) {
-          received.push(entry)
-          if (received.length === entries.length) {
-            test.deepEqual(received, entries, 'received entries')
-            receivedEntries = true
-            done()
-          }
-        })
+        }
+      })
       function done () {
         if (!receivedEntries || receivedCurrent) return
         reader.disconnect()
@@ -157,10 +157,10 @@ function withTestServer (callback) {
   var handler = logServerHandler(log, logs, blobs, emitter)
   var sockets = streamSet()
   var server = net.createServer()
-    .on('connection', handler)
-    .on('connection', function (socket) { sockets.add(socket) })
-    .once('close', function () { level.close() })
-    .listen(0, function () {
-      callback(server, this.address().port, sockets)
-    })
+  .on('connection', handler)
+  .on('connection', function (socket) { sockets.add(socket) })
+  .once('close', function () { level.close() })
+  .listen(0, function () {
+    callback(server, this.address().port, sockets)
+  })
 }

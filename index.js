@@ -29,14 +29,14 @@ function TCPLogClient (options) {
   this._reconnect = reconnecter(function (stream) {
     stream.on('close', function () { self._json = false })
     var json = self._json = duplexJSONStream(stream)
-      .on('data', function (message) {
-        if ('current' in message) emit('current')
-        else if (message.event === 'wrote') {
-          onWrote(message.index, message.id)
-        } else if ('entry' in message) {
-          onEntry(message.entry, message.index)
-        }
-      })
+    .on('data', function (message) {
+      if ('current' in message) emit('current')
+      else if (message.event === 'wrote') {
+        onWrote(message.index, message.id)
+      } else if ('entry' in message) {
+        onEntry(message.entry, message.index)
+      }
+    })
     Object.keys(writes).forEach(function (id) {
       if (writes[id].sent === false) {
         json.write(writeMessage(writes[id].entry, id))
@@ -45,14 +45,14 @@ function TCPLogClient (options) {
     })
     json.write({type: 'read', from: head})
   })
-    .on('connect', function () { emit('connect') })
-    .on('reconnect', function () { emit('reconnect') })
-    .on('disconnect', function (error) {
-      self._json = false
-      emit('disconnect', error)
-    })
-    .on('error', function (error) { emit('error', error) })
-    .connect(tcpOptions)
+  .on('connect', function () { emit('connect') })
+  .on('reconnect', function () { emit('reconnect') })
+  .on('disconnect', function (error) {
+    self._json = false
+    emit('disconnect', error)
+  })
+  .on('error', function (error) { emit('error', error) })
+  .connect(tcpOptions)
 
   function onWrote (index, id) {
     var write = writes[id]
