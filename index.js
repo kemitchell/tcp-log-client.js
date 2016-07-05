@@ -48,7 +48,7 @@ function TCPLogClient (options) {
         writes[id].sent = true
       }
     })
-    json.write({type: 'read', from: head})
+    json.write({type: 'read', from: head + 1})
   })
   .on('connect', function () { emit('connect') })
   .on('reconnect', function () { emit('reconnect') })
