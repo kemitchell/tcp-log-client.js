@@ -38,6 +38,8 @@ function TCPLogClient (options) {
         emit('current')
       } else if (isWriteError(message)) {
         onWriteError(message.index, message.error)
+      } else if (isReadError(message)) {
+        emit('error', message.index, message.error)
       }
     })
     Object.keys(writes).forEach(function (id) {
@@ -129,6 +131,10 @@ function isConfirmation (message) {
 
 function isWriteError (message) {
   return 'id' in message && 'error' in message
+}
+
+function isReadError (message) {
+  return 'index' in message && 'error' in message
 }
 
 var optionValidations = {

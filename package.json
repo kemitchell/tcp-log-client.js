@@ -19,7 +19,7 @@
     "standard": "^7.1.2",
     "stream-set": "^1.1.0",
     "tape": "^4.6.0",
-    "tcp-log-server": "^4.0.0"
+    "tcp-log-server": "^4.1.0"
   },
   "license": "MIT",
   "repository": "kemitchell/tcp-log-client.js",
