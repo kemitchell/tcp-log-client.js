@@ -33,6 +33,8 @@ function TCPLogClient (options) {
       if (isCurrent(message)) emit('current')
       else if (isConfirmation(message)) {
         onWrote(message.index, message.id)
+      } else if (isWriteError(message)) {
+        onWriteError(message.index, message.error)
       } else if (isEntry(message)) {
         onEntry(message.entry, message.index)
       }
@@ -60,6 +62,14 @@ function TCPLogClient (options) {
     var callback = write.callback
     onEntry(write.entry, index)
     if (callback) callback(null, index)
+    delete writes[id]
+  }
+
+  function onWriteError (id, error) {
+    var write = writes[id]
+    clearTimeout(write.timeout)
+    var callback = write.callback
+    if (callback) callback(error)
     delete writes[id]
   }
 
@@ -114,6 +124,10 @@ function isEntry (message) {
 
 function isConfirmation (message) {
   return 'id' in message && 'index' in message
+}
+
+function isWriteError (message) {
+  return 'id' in message && 'error' in message
 }
 
 var optionValidations = {
