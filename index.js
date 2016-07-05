@@ -30,10 +30,10 @@ function TCPLogClient (options) {
     stream.on('close', function () { self._json = false })
     var json = self._json = duplexJSONStream(stream)
     .on('data', function (message) {
-      if ('current' in message) emit('current')
-      else if (message.event === 'wrote') {
+      if (isCurrent(message)) emit('current')
+      else if (isConfirmation(message)) {
         onWrote(message.index, message.id)
-      } else if ('entry' in message) {
+      } else if (isEntry(message)) {
         onEntry(message.entry, message.index)
       }
     })
@@ -92,7 +92,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
 }
 
 function writeMessage (entry, id) {
-  return {type: 'write', id: id, entry: entry}
+  return {id: id, entry: entry}
 }
 
 TCPLogClient.prototype.reconnect = function () {
@@ -102,6 +102,18 @@ TCPLogClient.prototype.reconnect = function () {
 TCPLogClient.prototype.disconnect = function () {
   this._reconnect.reconnect = false
   this._reconnect.disconnect()
+}
+
+function isCurrent (message) {
+  return 'current' in message && message.current === true
+}
+
+function isEntry (message) {
+  return 'entry' in message && 'index' in message
+}
+
+function isConfirmation (message) {
+  return 'id' in message && 'index' in message
 }
 
 var optionValidations = {
