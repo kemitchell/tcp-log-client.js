@@ -5,13 +5,9 @@ Sync with [tcp-log-server]s.
 ```javascript
 var client = new TCPLogClient({port: port})
 
-client.on('entry', function (entry, index) {
-  console.log(entry)
-})
+client.on('entry', function (entry, index) { })
 
-client.write({a: 1})
-
-// ...
+client.write({a: 1}, function (error, index) { })
 
 client.disconnect()
 ```
