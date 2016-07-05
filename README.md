@@ -1,4 +1,4 @@
-Sync with [tcp-log-server]s.
+Sync with a [tcp-log-server].
 
 [tcp-log-server]: https://npmjs.com/packages/tcp-log-server
 
