@@ -30,13 +30,14 @@ function TCPLogClient (options) {
     stream.on('close', function () { self._json = false })
     var json = self._json = duplexJSONStream(stream)
     .on('data', function (message) {
-      if (isCurrent(message)) emit('current')
-      else if (isConfirmation(message)) {
+      if (isEntry(message)) {
+        onEntry(message.entry, message.index)
+      } else if (isConfirmation(message)) {
         onWrote(message.index, message.id)
+      } else if (isCurrent(message)) {
+        emit('current')
       } else if (isWriteError(message)) {
         onWriteError(message.index, message.error)
-      } else if (isEntry(message)) {
-        onEntry(message.entry, message.index)
       }
     })
     Object.keys(writes).forEach(function (id) {
