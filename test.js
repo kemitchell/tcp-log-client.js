@@ -1,6 +1,7 @@
 var EventEmitter = require('events').EventEmitter
 var TCPLogClient = require('./')
 var abs = require('abstract-blob-store')
+var asyncMapSeries = require('async.mapseries')
 var devnull = require('dev-null')
 var levelLogs = require('level-logs')
 var levelup = require('levelup')
@@ -56,6 +57,32 @@ tape('read and write from same client', function (test) {
         }
       })
       entries.forEach(function (entry) { client.write(entry) })
+    })
+  })
+})
+
+tape('writes call back with indices', function (test) {
+  startTestServer(function (server, port) {
+    var client = new TCPLogClient({server: {port: port}})
+    .connect()
+    .once('ready', function () {
+      var expected = []
+      var received = []
+      asyncMapSeries(entries, function (entry, done) {
+        client.write(entry, function (error, index) {
+          test.ifError(error)
+          expected.push({index: index, entry: entry})
+        })
+      })
+      client.readStream.on('data', function (data) {
+        received.push(data)
+        if (received.length === expected.length) {
+          test.deepEqual(received, expected, 'received entries')
+          client.destroy()
+          server.close()
+          test.end()
+        }
+      })
     })
   })
 })

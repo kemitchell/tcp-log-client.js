@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "abstract-blob-store": "^3.2.0",
+    "async.mapseries": "^0.5.2",
     "dev-null": "^0.1.1",
     "level-logs": "^1.1.0",
     "levelup": "^1.3.2",
