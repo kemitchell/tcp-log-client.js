@@ -121,9 +121,9 @@ function TCPLogClient (options) {
 inherits(TCPLogClient, EventEmitter)
 
 TCPLogClient.prototype.destroy = function () {
-  this.readStream.end()
   this._reconnect.reconnect = false
   this._reconnect.disconnect()
+  this.readStream.end()
 }
 
 TCPLogClient.prototype.write = function (entry, callback) {
