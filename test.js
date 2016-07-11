@@ -1,6 +1,6 @@
 var EventEmitter = require('events').EventEmitter
+var InMemoryBlobStore = require('abstract-blob-store')
 var TCPLogClient = require('./')
-var abs = require('abstract-blob-store')
 var asyncMapSeries = require('async.mapseries')
 var devnull = require('dev-null')
 var levelLogs = require('level-logs')
@@ -15,19 +15,25 @@ var tape = require('tape')
 
 function startTestServer (callback) {
   memdown.clearGlobalStore()
+  // Use an in-memdown LevelUP storage back-end for testing.
   var level = levelup('', {db: memdown})
-  var logs = levelLogs(level, {valueEncoding: 'json'})
-  var blobs = abs()
-  var log = pino({}, devnull())
-  var emitter = new EventEmitter()
-  var handler = logServerHandler(log, logs, blobs, emitter, sha256)
+  var handler = logServerHandler(
+    // Provide a pino logger, but pipe it to nowhere.
+    pino({}, devnull()),
+    levelLogs(level, {valueEncoding: 'json'}),
+    // Use an in-memory blob store for testing.
+    new InMemoryBlobStore(),
+    new EventEmitter(),
+    sha256
+  )
+  // Track connections so tests can close to simulate problems.
   var connections = streamSet()
-  var server = net.createServer()
+  net.createServer()
   .on('connection', function (socket) { connections.add(socket) })
   .on('connection', handler)
   .once('close', function () { level.close() })
   .listen(0, function () {
-    callback(server, this.address().port, connections)
+    callback(this, this.address().port, connections)
   })
 }
 
