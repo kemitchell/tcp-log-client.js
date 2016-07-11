@@ -3,6 +3,8 @@ Stream and write [tcp-log-server] entries.  Reconnect automatically.
 [tcp-log-server]: https://npmjs.com/packages/tcp-log-server
 
 ```javascript
+var TCPLogClient = require('tcp-log-client')
+
 var client = new TCPLogClient({
   // Use these options for `require('net').connect(options)`.
   server: {port: port},
