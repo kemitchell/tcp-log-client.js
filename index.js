@@ -10,9 +10,7 @@ var uuid = require('uuid').v4
 module.exports = TCPLogClient
 
 function TCPLogClient (options) {
-  if (!(this instanceof TCPLogClient)) {
-    return new TCPLogClient(options)
-  }
+  if (!(this instanceof TCPLogClient)) return new TCPLogClient(options)
 
   var client = this
 
@@ -25,14 +23,18 @@ function TCPLogClient (options) {
   client.connected = false
 
   // When the client is connected, a stream of log entries.
-  client.readStream = through2.obj()
+  client.readStream = through2.obj(function (chunk, _, done) {
+    // Advance the last-entry-seen counter.
+    from = chunk.index
+    done(null, chunk)
+  })
 
   // The stream provided for consumption by reconnect-core.
   client._stream = null
 
   // Whether the client has ever successfully connected to the server.
   // Affects error event handling.
-  var successfullyConnected = true
+  var everConnected = true
 
   // A UUID-to-function map of callbacks for writes to the log. Used to
   // issue callbacks when the server responds with write confirmations.
@@ -42,10 +44,9 @@ function TCPLogClient (options) {
   client._reconnect = reconnect(function () {
     return net.connect(serverOptions).setKeepAlive(true)
   })(reconnectOptions, function (stream) {
-    successfullyConnected = true
+    everConnected = true
     // Create a stream to filter out entries for reading.
     var filterStream = createReadStream(stream)
-    // Report when the stream is current.
     .once('current', function () { client.emit('current') })
     // Issue a read request from one past the last-seen index.
     stream.write(JSON.stringify({from: from + 1}) + '\n')
@@ -70,13 +71,13 @@ function TCPLogClient (options) {
   .on('disconnect', function (error) {
     if (client.readStream) client.readStream.unpipe()
     client.connected = false
-    clearWrites('Disconnected from server.')
+    failPendingWrites('Disconnected from server.')
     client.emit('disconnect', error)
   })
   .on('error', function (error) {
-    if (successfullyConnected) {
+    if (everConnected) {
       var code = error.code
-      if (code === 'EPIPE') clearWrites('Server closed the connection.')
+      if (code === 'EPIPE') failPendingWrites('Server closed the connection.')
       else if (code === 'ECONNRESET') return
       else if (code === 'ECONNREFUSED') return
       else client.emit('error', error)
@@ -94,8 +95,6 @@ function TCPLogClient (options) {
           if ('error' in message) returned.emit('error', message)
           // Pass through log entries.
           else if ('entry' in message) {
-            // Advance the last-entry-seen counter.
-            from = message.index
             this.push(message)
           // Callback for confirmed writes.
           } else if ('id' in message) {
@@ -111,7 +110,7 @@ function TCPLogClient (options) {
     return returned
   }
 
-  function clearWrites (message) {
+  function failPendingWrites (message) {
     Object.keys(client._writeCallbacks).forEach(function (id) {
       client._writeCallbacks[id](new Error(message))
     })
@@ -139,9 +138,9 @@ TCPLogClient.prototype.write = function (entry, callback) {
   }
 }
 
+function noop () { return }
+
 TCPLogClient.prototype.connect = function () {
   this._reconnect.connect()
   return this
 }
-
-function noop () { return }
