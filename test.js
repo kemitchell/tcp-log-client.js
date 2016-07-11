@@ -200,6 +200,20 @@ tape('fail', function (test) {
   })
 })
 
+tape('destroy ends read stream', function (test) {
+  startTestServer(function (server, port, connections) {
+    var options = {server: {port: port}}
+    var client = new TCPLogClient(options)
+    .connect()
+    .once('ready', function () { client.destroy() })
+    client.readStream.once('finish', function () {
+      test.pass('stream ended')
+      server.close()
+      test.end()
+    })
+  })
+})
+
 function destroyAll (connections) {
   connections.forEach(function (connection) {
     connection.destroy()
