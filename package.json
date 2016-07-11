@@ -1,6 +1,6 @@
 {
   "name": "tcp-log-client",
-  "description": "sync with a tcp-log-server",
+  "description": "stream and write tcp-log-server entries",
   "version": "3.1.0",
   "author": "Kyle E. Mitchell <kyle@kemitchell.com> (https://kemitchell.com/)",
   "dependencies": {
