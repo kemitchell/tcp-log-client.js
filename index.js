@@ -62,6 +62,9 @@ function TCPLogClient (options) {
     client.emit('reconnect', number, delay)
   })
   .on('disconnect', function (error) {
+    if (client.readStream) client.readStream.unpipe()
+    client.connected = false
+    client.readStream = null
     clearWrites('Disconnected from server.')
     client.emit('disconnect', error)
   })
