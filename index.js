@@ -16,8 +16,10 @@ function TCPLogClient (options) {
 
   // Apply default options.
   var serverOptions = options.server
-  var from = options.from || 0
+  var highestIndexReceived = options.from || 0
   var reconnectOptions = options.reconnect || {}
+  var keepAlive = Boolean(options.keepalive) || true
+  var noDelay = Boolean(options.noDelay) || true
 
   // Whether the client is currently connected.
   client.connected = false
@@ -25,12 +27,12 @@ function TCPLogClient (options) {
   // When the client is connected, a stream of log entries.
   client.readStream = through2.obj(function (chunk, _, done) {
     // Advance the last-entry-seen counter.
-    from = chunk.index
+    highestIndexReceived = chunk.index
     done(null, chunk)
   })
 
   // The stream provided for consumption by reconnect-core.
-  client._stream = null
+  client._socketStream = null
 
   // Whether the client has ever successfully connected to the server.
   // Affects error event handling.
@@ -42,21 +44,23 @@ function TCPLogClient (options) {
 
   // Create a reconnect-core instance for TCP connection to server.
   client._reconnect = reconnect(function () {
-    return net.connect(serverOptions).setKeepAlive(true)
+    return net.connect(serverOptions)
+      .setKeepAlive(keepAlive)
+      .setNoDelay(noDelay)
   })(reconnectOptions, function (stream) {
     everConnected = true
     // Create a stream to filter out entries for reading.
     var filterStream = createReadStream(stream)
     .once('current', function () { client.emit('current') })
     // Issue a read request from one past the last-seen index.
-    stream.write(JSON.stringify({from: from + 1}) + '\n')
+    stream.write(JSON.stringify({from: highestIndexReceived + 1}) + '\n')
     if (client._filterStream) {
       client._filterStream.removeAllListeners()
       client._filterStream.unpipe()
     }
     client._filterStream = filterStream
     filterStream.pipe(client.readStream, {end: false})
-    client._stream = stream
+    client._socketStream = stream
     client.emit('ready')
   })
   .on('connect', function (connection) {
@@ -134,7 +138,8 @@ TCPLogClient.prototype.write = function (entry, callback) {
     // confirm the write.
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
-    return this._stream.write(JSON.stringify({id: id, entry: entry}) + '\n')
+    var message = JSON.stringify({id: id, entry: entry}) + '\n'
+    return this._socketStream.write(message)
   }
 }
 
