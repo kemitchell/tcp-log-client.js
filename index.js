@@ -16,8 +16,8 @@ function TCPLogClient (options) {
 
   // Apply default options.
   var serverOptions = options.server
-  var highestIndexReceived = options.from || 0
   var reconnectOptions = options.reconnect || {}
+  var highestIndexReceived = Number(options.from) || 0
   var keepAlive = Boolean(options.keepalive) || true
   var noDelay = Boolean(options.noDelay) || true
 
@@ -43,17 +43,14 @@ function TCPLogClient (options) {
   client._writeCallbacks = {}
 
   // Create a reconnect-core instance for TCP connection to server.
-  client._reconnect = reconnect(function () {
+  var reconnecter = client._reconnecter = reconnect(function () {
     return net.connect(serverOptions)
-      .setKeepAlive(keepAlive)
-      .setNoDelay(noDelay)
+    .setKeepAlive(keepAlive)
+    .setNoDelay(noDelay)
   })(reconnectOptions, function (stream) {
-    everConnected = true
     // Create a stream to filter out entries for reading.
     var filterStream = createReadStream(stream)
-    .once('current', function () { client.emit('current') })
-    // Issue a read request from one past the last-seen index.
-    stream.write(JSON.stringify({from: highestIndexReceived + 1}) + '\n')
+    proxyEvent(filterStream, 'current')
     if (client._filterStream) {
       client._filterStream.removeAllListeners()
       client._filterStream.unpipe()
@@ -61,22 +58,9 @@ function TCPLogClient (options) {
     client._filterStream = filterStream
     filterStream.pipe(client.readStream, {end: false})
     client._socketStream = stream
+    // Issue a read request from one past the last-seen index.
+    stream.write(JSON.stringify({from: highestIndexReceived + 1}) + '\n')
     client.emit('ready')
-  })
-  .on('connect', function (connection) {
-    client.connected = true
-    client.emit('connect', connection)
-  })
-  .on('reconnect', function (number, delay) {
-    client.connected = true
-    client.emit('reconnect', number, delay)
-  })
-  .on('backoff', function () { client.emit('backoff') })
-  .on('disconnect', function (error) {
-    if (client.readStream) client.readStream.unpipe()
-    client.connected = false
-    failPendingWrites('Disconnected from server.')
-    client.emit('disconnect', error)
   })
   .on('error', function (error) {
     if (!everConnected) client.emit('error', error)
@@ -88,7 +72,28 @@ function TCPLogClient (options) {
       else client.emit('error', error)
     }
   })
-  .on('fail', function () { client.emit('fail') })
+
+  proxyEvent(reconnecter, 'disconnect', function () {
+    if (client.readStream) client.readStream.unpipe()
+    client.connected = false
+    failPendingWrites('Disconnected from server.')
+  })
+  proxyEvent(reconnecter, 'reconnect', function () {
+    client.connected = true
+  })
+  proxyEvent(reconnecter, 'connect', function (connection) {
+    everConnected = true
+    client.connected = true
+  })
+  proxyEvent(reconnecter, 'backoff')
+  proxyEvent(reconnecter, 'fail')
+
+  function proxyEvent (emitter, event, optionalCallback) {
+    emitter.on(event, function () {
+      if (optionalCallback) optionalCallback.apply(client, arguments)
+      client.emit(event)
+    })
+  }
 
   function createReadStream (socket) {
     var returned = pump(
@@ -128,8 +133,8 @@ function TCPLogClient (options) {
 inherits(TCPLogClient, EventEmitter)
 
 TCPLogClient.prototype.destroy = function () {
-  this._reconnect.reconnect = false
-  this._reconnect.disconnect()
+  this._reconnecter.reconnect = false
+  this._reconnecter.disconnect()
   this.readStream.end()
 }
 
@@ -149,6 +154,6 @@ TCPLogClient.prototype.write = function (entry, callback) {
 function noop () { }
 
 TCPLogClient.prototype.connect = function () {
-  this._reconnect.connect()
+  this._reconnecter.connect()
   return this
 }
