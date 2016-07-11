@@ -1,13 +1,31 @@
-Sync with a [tcp-log-server].
+Stream and write [tcp-log-server] entries.  Reconnect automatically.
 
 [tcp-log-server]: https://npmjs.com/packages/tcp-log-server
 
 ```javascript
-var client = new TCPLogClient({port: port})
+var client = new TCPLogClient({
+  // Options for `require('net').connect(options)`
+  server: {host: 'localhost', port: port},
+  // Log index to start from
+  from: 1,
+  // Stop trying to reconnect and fail after 5 attempts.
+  reconnect: {failAfter: 5}
+})
+.on('error', function (error) { console.error(error) })
+.on('fail', function () { console.error('Could not connect.') })
+.once('ready', function () {
+  if (client.connected) {
+    client.write({example: 'entry'}, function (error, index) {
+      // ...
+      client.destroy()
+    })
+  }
+})
 
-client.on('entry', function (entry, index) { })
-
-client.write({a: 1}, function (error, index) { })
-
-client.disconnect()
+// Readable stream of log entries.
+// Entries added with `client.write()` will be streamed, too.
+client.readStream.on('data', function (chunk) {
+  console.log(chunk.index)
+  console.log(chunk.entry)
+})
 ```
