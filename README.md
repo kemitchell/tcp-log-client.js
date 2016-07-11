@@ -15,8 +15,12 @@ var client = new TCPLogClient({
   // Stop trying to reconnect and fail after 5 attempts.
   reconnect: {failAfter: 5}
 })
-.on('error', function (error) { console.error(error) })
-.on('fail', function () { console.error('Failed to reconnect.') })
+.on('error', function (error) {
+  console.error(error)
+})
+.on('fail', function () {
+  console.error('Failed to reconnect.')
+})
 .once('ready', function () {
   if (client.connected) {
     client.write({example: 'entry'}, function (error, index) {
