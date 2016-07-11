@@ -1,9 +1,9 @@
 var EventEmitter = require('events').EventEmitter
-var reconnect = require('reconnect-core')
 var inherits = require('util').inherits
 var ndjson = require('ndjson')
 var net = require('net')
 var pump = require('pump')
+var reconnect = require('reconnect-core')
 var through2 = require('through2')
 var uuid = require('uuid').v4
 
