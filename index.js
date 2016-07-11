@@ -25,7 +25,7 @@ function TCPLogClient (options) {
   client.connected = false
 
   // When the client is connected, a stream of log entries.
-  client.readStream = null
+  client.readStream = through2.obj()
 
   // The stream provided for consumption by reconnect-core.
   client._stream = null
@@ -44,12 +44,17 @@ function TCPLogClient (options) {
   })(reconnectOptions, function (stream) {
     successfullyConnected = true
     // Create a stream to filter out entries for reading.
-    var readStream = createReadStream(stream)
+    var filterStream = createReadStream(stream)
     // Report when the stream is current.
     .once('current', function () { client.emit('current') })
     // Issue a read request from one past the last-seen index.
     stream.write(JSON.stringify({from: from + 1}) + '\n')
-    client.readStream = readStream
+    if (client._filterStream) {
+      client._filterStream.removeAllListeners()
+      client._filterStream.unpipe()
+    }
+    client._filterStream = filterStream
+    filterStream.pipe(client.readStream, {end: false})
     client._stream = stream
     client.emit('ready')
   })
@@ -65,7 +70,6 @@ function TCPLogClient (options) {
   .on('disconnect', function (error) {
     if (client.readStream) client.readStream.unpipe()
     client.connected = false
-    client.readStream = null
     clearWrites('Disconnected from server.')
     client.emit('disconnect', error)
   })

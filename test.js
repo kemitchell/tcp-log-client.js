@@ -124,7 +124,7 @@ tape('current event', function (test) {
       var reader = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
-        reader.readStream.once('current', function (data) {
+        reader.once('current', function (data) {
           test.pass('current event emitted')
           reader.destroy()
           writer.destroy()
@@ -167,16 +167,14 @@ tape('read after reconnect', function (test) {
         destroyAll(connections)
       })
     })
-    .on('ready', function () {
-      client.readStream.on('data', function (data) {
-        received.push(data.entry)
-        if (received.length === entries.length) {
-          test.deepEqual(received, entries, 'received entries')
-          client.destroy()
-          server.close()
-          test.end()
-        }
-      })
+    client.readStream.on('data', function (data) {
+      received.push(data.entry)
+      if (received.length === entries.length) {
+        test.deepEqual(received, entries, 'received entries')
+        client.destroy()
+        server.close()
+        test.end()
+      }
     })
   })
 })
