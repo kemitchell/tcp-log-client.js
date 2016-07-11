@@ -22,21 +22,20 @@ function TCPLogClient (options) {
 
   client.connected = false
   client.readStream = null
-  client.writeStream = null
-  var writes = {}
 
+  client._connection = null
   var successfullyConnected = true
+  client._writes = {}
 
   client._reconnect = reconnect(function () {
     return net.connect(serverOptions).setKeepAlive(true)
   })(reconnectOptions, function (stream) {
     successfullyConnected = true
-    writes = {}
     var readStream = createReadStream(stream)
     .once('current', function () { client.emit('current') })
     stream.write(JSON.stringify({from: from + 1}) + '\n')
     client.readStream = readStream
-    client.writeStream = createWriteStream(stream)
+    client._connection = stream
     client.emit('ready')
   })
   .on('connect', function (connection) {
@@ -48,12 +47,17 @@ function TCPLogClient (options) {
     client.emit('reconnect', number, delay)
   })
   .on('disconnect', function (error) {
+    clearWrites('Disconnected from server.')
     client.emit('disconnect', error)
   })
   .on('error', function (error) {
-    if (!successfullyConnected || !trapError(error)) {
-      client.emit('error', error)
-    }
+    if (successfullyConnected) {
+      var code = error.code
+      if (code === 'EPIPE') clearWrites('Server closed the connection.')
+      else if (code === 'ECONNRESET') return
+      else if (code === 'ECONNREFUSED') return
+      else client.emit('error', error)
+    } else client.emit('error', error)
   })
 
   client._reconnect.connect()
@@ -69,6 +73,11 @@ function TCPLogClient (options) {
           else if ('entry' in message) {
             from = message.index
             this.push(message)
+          } else if ('id' in message) {
+            var id = message.id
+            var callback = client._writes[id]
+            delete client._writes[id]
+            callback(null, message.index)
           }
         }
         done()
@@ -77,19 +86,13 @@ function TCPLogClient (options) {
     return returned
   }
 
-  function createWriteStream (socket) {
-    var returned = through2.obj(function (chunk, _, done) {
-      var id = uuid()
-      writes[id] = chunk
-      done(null, {id: id, entry: chunk})
+  function clearWrites (message) {
+    Object.keys(client._writes).forEach(function (id) {
+      var callback = client._writes[id]
+      callback(new Error(message))
     })
-    pump(returned, ndjson.stringify(), socket)
-    return returned
+    client._writes = {}
   }
-}
-
-function trapError (error) {
-  return error.code === 'ECONNRESET' || error.code === 'ECONNREFUSED'
 }
 
 inherits(TCPLogClient, EventEmitter)
@@ -98,3 +101,15 @@ TCPLogClient.prototype.destroy = function () {
   this._reconnect.reconnect = false
   this._reconnect.disconnect()
 }
+
+TCPLogClient.prototype.write = function (entry, callback) {
+  if (!this.connected) {
+    throw new Error('Cannot write when disconnected.')
+  } else {
+    var id = uuid()
+    this._writes[id] = callback || noop
+    this._connection.write(JSON.stringify({id: id, entry: entry}) + '\n')
+  }
+}
+
+function noop () { return }
