@@ -134,7 +134,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
     // confirm the write.
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
-    this._stream.write(JSON.stringify({id: id, entry: entry}) + '\n')
+    return this._stream.write(JSON.stringify({id: id, entry: entry}) + '\n')
   }
 }
 
