@@ -1,6 +1,6 @@
 var EventEmitter = require('events').EventEmitter
+var TCPLogClient = require('./')
 var abs = require('abstract-blob-store')
-var client = require('./')
 var devnull = require('dev-null')
 var levelLogs = require('level-logs')
 var levelup = require('levelup')
@@ -9,72 +9,10 @@ var memdown = require('memdown')
 var net = require('net')
 var pino = require('pino')
 var sha256 = require('sha256')
+var streamSet = require('stream-set')
 var tape = require('tape')
 
-tape('start a test server', function (test) {
-  withTestServer(function (server, port) {
-    test.pass('started a server')
-    server.close()
-    test.end()
-  })
-})
-
-tape('read and write', function (test) {
-  withTestServer(function (server, port) {
-    var readStream = client.createReadStream(socket(port))
-    .on('data', function (data) {
-      test.deepEqual(data.entry, {a: 1}, 'event with entry')
-      test.equal(data.index, 1, 'event with index')
-      writeStream.end()
-      readStream.destroy()
-      server.close()
-      test.end()
-    })
-    var writeStream = client.createWriteStream(socket(port))
-    writeStream.write({a: 1})
-  })
-})
-
-tape('read previous writes', function (test) {
-  withTestServer(function (server, port) {
-    var writeStream = client.createWriteStream(socket(port))
-    var entries = [{a: 1}, {b: 2}, {c: 3}]
-    var received = []
-    var receivedCurrent = false
-    var receivedEntries = false
-    var readStream = client.createReadStream(socket(port))
-    .once('current', function () {
-      test.pass('current event')
-      receivedCurrent = true
-      done()
-    })
-    .on('data', function (data) {
-      received.push(data.entry)
-      if (received.length === entries.length) {
-        test.deepEqual(received, entries, 'received entries')
-        receivedEntries = true
-        done()
-      }
-    })
-    function done () {
-      if (receivedEntries && receivedCurrent) {
-        writeStream.end()
-        readStream.destroy()
-        server.close()
-        test.end()
-      }
-    }
-    entries.forEach(function (entry) {
-      writeStream.write(entry)
-    })
-  })
-})
-
-function socket (port) {
-  return net.connect(port).setKeepAlive(true)
-}
-
-function withTestServer (callback) {
+function startTestServer (callback) {
   memdown.clearGlobalStore()
   var level = levelup('', {db: memdown})
   var logs = levelLogs(level, {valueEncoding: 'json'})
@@ -82,8 +20,133 @@ function withTestServer (callback) {
   var log = pino({}, devnull())
   var emitter = new EventEmitter()
   var handler = logServerHandler(log, logs, blobs, emitter, sha256)
+  var connections = streamSet()
   var server = net.createServer()
+  .on('connection', function (socket) { connections.add(socket) })
   .on('connection', handler)
   .once('close', function () { level.close() })
-  .listen(0, function () { callback(server, this.address().port) })
+  .listen(0, function () {
+    callback(server, this.address().port, connections)
+  })
 }
+
+tape('start a test server', function (test) {
+  startTestServer(function (server, port) {
+    test.pass('started a server')
+    server.close()
+    test.end()
+  })
+})
+
+tape('read and write from same client', function (test) {
+  startTestServer(function (server, port) {
+    var entries = [{a: 1}, {b: 2}, {c: 3}]
+    var received = []
+    var client = new TCPLogClient({server: {port: port}})
+    .once('ready', function () {
+      client.readStream.on('data', function (data) {
+        received.push(data.entry)
+        if (received.length === entries.length) {
+          test.deepEqual(received, entries, 'received entries')
+          client.destroy()
+          server.close()
+          test.end()
+        }
+      })
+      entries.forEach(function (entry) {
+        client.writeStream.write(entry)
+      })
+    })
+  })
+})
+
+tape('read another client\'s writes', function (test) {
+  startTestServer(function (server, port) {
+    var options = {server: {port: port}}
+    var reader = new TCPLogClient(options).once('ready', function () {
+      var writer = new TCPLogClient(options).once('ready', function () {
+        var entries = [{a: 1}, {b: 2}, {c: 3}]
+        var received = []
+        reader.readStream.on('data', function (data) {
+          received.push(data.entry)
+          if (received.length === entries.length) {
+            test.deepEqual(received, entries, 'received entries')
+            reader.destroy()
+            writer.destroy()
+            server.close()
+            test.end()
+          }
+        })
+        entries.forEach(function (entry) {
+          writer.writeStream.write(entry)
+        })
+      })
+    })
+  })
+})
+
+tape('read another client\'s previous writes', function (test) {
+  startTestServer(function (server, port) {
+    var options = {server: {port: port}}
+    var reader = new TCPLogClient(options).once('ready', function () {
+      var writer = new TCPLogClient(options).once('ready', function () {
+        var entries = [{a: 1}, {b: 2}, {c: 3}]
+        entries.forEach(function (entry) {
+          writer.writeStream.write(entry)
+        })
+        setTimeout(function () {
+          var received = []
+          reader.readStream.on('data', function (data) {
+            received.push(data.entry)
+            if (received.length === entries.length) {
+              test.deepEqual(received, entries, 'received entries')
+              reader.destroy()
+              writer.destroy()
+              server.close()
+              test.end()
+            }
+          })
+        }, 100)
+      })
+    })
+  })
+})
+
+tape('current event', function (test) {
+  startTestServer(function (server, port) {
+    var options = {server: {port: port}}
+    var writer = new TCPLogClient(options).once('ready', function () {
+      var entries = [{a: 1}, {b: 2}, {c: 3}]
+      entries.forEach(function (entry) {
+        writer.writeStream.write(entry)
+      })
+      var reader = new TCPLogClient(options).once('ready', function () {
+        reader.readStream.once('current', function (data) {
+          test.pass('current event emitted')
+          reader.destroy()
+          writer.destroy()
+          server.close()
+          test.end()
+        })
+      })
+    })
+  })
+})
+
+tape('reconnect', function (test) {
+  startTestServer(function (server, port, connections) {
+    var options = {server: {port: port}}
+    var client = new TCPLogClient(options)
+    .once('ready', function () {
+      connections.forEach(function (connection) {
+        connection.destroy()
+      })
+    })
+    .once('reconnect', function () {
+      test.pass('reconnected')
+      client.destroy()
+      server.close()
+      test.end()
+    })
+  })
+})
