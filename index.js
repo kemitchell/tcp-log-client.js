@@ -79,13 +79,14 @@ function TCPLogClient (options) {
     client.emit('disconnect', error)
   })
   .on('error', function (error) {
-    if (everConnected) {
+    if (!everConnected) client.emit('error', error)
+    else {
       var code = error.code
       if (code === 'EPIPE') failPendingWrites('Server closed the connection.')
       else if (code === 'ECONNRESET') return
       else if (code === 'ECONNREFUSED') return
       else client.emit('error', error)
-    } else client.emit('error', error)
+    }
   })
   .on('fail', function () { client.emit('fail') })
 
@@ -115,10 +116,12 @@ function TCPLogClient (options) {
   }
 
   function failPendingWrites (message) {
+    var callbacks = client._writeCallbacks
     Object.keys(client._writeCallbacks).forEach(function (id) {
-      client._writeCallbacks[id](new Error(message))
+      var callback = callbacks[id]
+      delete callbacks[id]
+      callback(new Error(message))
     })
-    client._writeCallbacks = {}
   }
 }
 
@@ -143,7 +146,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
   }
 }
 
-function noop () { return }
+function noop () { }
 
 TCPLogClient.prototype.connect = function () {
   this._reconnect.connect()
