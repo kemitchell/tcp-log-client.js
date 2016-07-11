@@ -79,8 +79,6 @@ function TCPLogClient (options) {
   })
   .on('fail', function () { client.emit('fail') })
 
-  client._reconnect.connect()
-
   function createReadStream (socket) {
     var returned = pump(
       socket,
@@ -127,10 +125,17 @@ TCPLogClient.prototype.write = function (entry, callback) {
   if (!this.connected) {
     throw new Error('Cannot write when disconnected.')
   } else {
+    // Generate a UUID for the write. The server will echo the UUID back to
+    // confirm the write.
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
     this._stream.write(JSON.stringify({id: id, entry: entry}) + '\n')
   }
+}
+
+TCPLogClient.prototype.connect = function () {
+  this._reconnect.connect()
+  return this
 }
 
 function noop () { return }

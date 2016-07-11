@@ -43,6 +43,7 @@ tape('read and write from same client', function (test) {
     var entries = [{a: 1}, {b: 2}, {c: 3}]
     var received = []
     var client = new TCPLogClient({server: {port: port}})
+    .connect()
     .once('ready', function () {
       client.readStream.on('data', function (data) {
         received.push(data.entry)
@@ -61,8 +62,12 @@ tape('read and write from same client', function (test) {
 tape('read another client\'s writes', function (test) {
   startTestServer(function (server, port) {
     var options = {server: {port: port}}
-    var reader = new TCPLogClient(options).once('ready', function () {
-      var writer = new TCPLogClient(options).once('ready', function () {
+    var reader = new TCPLogClient(options)
+    .connect()
+    .once('ready', function () {
+      var writer = new TCPLogClient(options)
+      .connect()
+      .once('ready', function () {
         var entries = [{a: 1}, {b: 2}, {c: 3}]
         var received = []
         reader.readStream.on('data', function (data) {
@@ -84,8 +89,12 @@ tape('read another client\'s writes', function (test) {
 tape('read another client\'s previous writes', function (test) {
   startTestServer(function (server, port) {
     var options = {server: {port: port}}
-    var reader = new TCPLogClient(options).once('ready', function () {
-      var writer = new TCPLogClient(options).once('ready', function () {
+    var reader = new TCPLogClient(options)
+    .connect()
+    .once('ready', function () {
+      var writer = new TCPLogClient(options)
+      .connect()
+      .once('ready', function () {
         var entries = [{a: 1}, {b: 2}, {c: 3}]
         entries.forEach(function (entry) { writer.write(entry) })
         setTimeout(function () {
@@ -109,10 +118,14 @@ tape('read another client\'s previous writes', function (test) {
 tape('current event', function (test) {
   startTestServer(function (server, port) {
     var options = {server: {port: port}}
-    var writer = new TCPLogClient(options).once('ready', function () {
+    var writer = new TCPLogClient(options)
+    .connect()
+    .once('ready', function () {
       var entries = [{a: 1}, {b: 2}, {c: 3}]
       entries.forEach(function (entry) { writer.write(entry) })
-      var reader = new TCPLogClient(options).once('ready', function () {
+      var reader = new TCPLogClient(options)
+      .connect()
+      .once('ready', function () {
         reader.readStream.once('current', function (data) {
           test.pass('current event emitted')
           reader.destroy()
@@ -129,6 +142,7 @@ tape('reconnect', function (test) {
   startTestServer(function (server, port, connections) {
     var options = {server: {port: port}}
     var client = new TCPLogClient(options)
+    .connect()
     .once('ready', function () {
       connections.forEach(function (connection) {
         connection.destroy()
@@ -149,6 +163,7 @@ tape('read after reconnect', function (test) {
     var entries = [{a: 1}, {b: 2}, {c: 3}]
     var received = []
     var client = new TCPLogClient(options)
+    .connect()
     .once('ready', function () {
       client.write(entries[0], function (error) {
         test.ifError(error, 'no error')
