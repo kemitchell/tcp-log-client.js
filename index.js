@@ -16,26 +16,41 @@ function TCPLogClient (options) {
 
   var client = this
 
+  // Apply default options.
   var serverOptions = options.server
   var from = options.from || 0
   var reconnectOptions = options.reconnect || {}
 
+  // Whether the client is currently connected.
   client.connected = false
+
+  // When the client is connected, a stream of log entries.
   client.readStream = null
 
-  client._connection = null
+  // The stream provided for consumption by reconnect-core.
+  client._stream = null
+
+  // Whether the client has ever successfully connected to the server.
+  // Affects error event handling.
   var successfullyConnected = true
+
+  // A UUID-to-function map of callbacks for writes to the log. Used to
+  // issue callbacks when the server responds with write confirmations.
   client._writeCallbacks = {}
 
+  // Create a reconnect-core instance for TCP connection to server.
   client._reconnect = reconnect(function () {
     return net.connect(serverOptions).setKeepAlive(true)
   })(reconnectOptions, function (stream) {
     successfullyConnected = true
+    // Create a stream to filter out entries for reading.
     var readStream = createReadStream(stream)
+    // Report when the stream is current.
     .once('current', function () { client.emit('current') })
+    // Issue a read request from one past the last-seen index.
     stream.write(JSON.stringify({from: from + 1}) + '\n')
     client.readStream = readStream
-    client._connection = stream
+    client._stream = stream
     client.emit('ready')
   })
   .on('connect', function (connection) {
@@ -71,9 +86,12 @@ function TCPLogClient (options) {
         if (message.current === true) returned.emit('current')
         else if ('index' in message) {
           if ('error' in message) returned.emit('error', message)
+          // Pass through log entries.
           else if ('entry' in message) {
+            // Advance the last-entry-seen counter.
             from = message.index
             this.push(message)
+          // Callback for confirmed writes.
           } else if ('id' in message) {
             var id = message.id
             var callback = client._writeCallbacks[id]
@@ -108,7 +126,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
   } else {
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
-    this._connection.write(JSON.stringify({id: id, entry: entry}) + '\n')
+    this._stream.write(JSON.stringify({id: id, entry: entry}) + '\n')
   }
 }
 
