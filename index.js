@@ -25,7 +25,7 @@ function TCPLogClient (options) {
 
   client._connection = null
   var successfullyConnected = true
-  client._writes = {}
+  client._writeCallbacks = {}
 
   client._reconnect = reconnect(function () {
     return net.connect(serverOptions).setKeepAlive(true)
@@ -75,8 +75,8 @@ function TCPLogClient (options) {
             this.push(message)
           } else if ('id' in message) {
             var id = message.id
-            var callback = client._writes[id]
-            delete client._writes[id]
+            var callback = client._writeCallbacks[id]
+            delete client._writeCallbacks[id]
             callback(null, message.index)
           }
         }
@@ -87,11 +87,10 @@ function TCPLogClient (options) {
   }
 
   function clearWrites (message) {
-    Object.keys(client._writes).forEach(function (id) {
-      var callback = client._writes[id]
-      callback(new Error(message))
+    Object.keys(client._writeCallbacks).forEach(function (id) {
+      client._writeCallbacks[id](new Error(message))
     })
-    client._writes = {}
+    client._writeCallbacks = {}
   }
 }
 
@@ -107,7 +106,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
     throw new Error('Cannot write when disconnected.')
   } else {
     var id = uuid()
-    this._writes[id] = callback || noop
+    this._writeCallbacks[id] = callback || noop
     this._connection.write(JSON.stringify({id: id, entry: entry}) + '\n')
   }
 }
