@@ -6,6 +6,10 @@ Stream and write [tcp-log-server] entries.  Reconnect automatically.
 var client = new TCPLogClient({
   // Options for `require('net').connect(options)`
   server: {host: 'localhost', port: port},
+  // TCP keepalive. Enabled by default.
+  keepAlive: true,
+  // Nagle algorithm. Disabled by default.
+  noDelay: true,
   // Log index to start from
   from: 1,
   // Stop trying to reconnect and fail after 5 attempts.
