@@ -47,19 +47,21 @@ function TCPLogClient (options) {
     return net.connect(serverOptions)
     .setKeepAlive(keepAlive)
     .setNoDelay(noDelay)
-  })(reconnectOptions, function (stream) {
+  })(reconnectOptions, function (newSocketStream) {
     // Create a stream to filter out entries for reading.
-    var filterStream = createReadStream(stream)
-    proxyEvent(filterStream, 'current')
+    var filterStream = createReadStream(newSocketStream)
+    // Replace the old duplex stream in the pipeline.
     if (client._filterStream) {
       client._filterStream.removeAllListeners()
       client._filterStream.unpipe()
     }
     client._filterStream = filterStream
     filterStream.pipe(client.readStream, {end: false})
-    client._socketStream = stream
+    client._socketStream = newSocketStream
     // Issue a read request from one past the last-seen index.
-    stream.write(JSON.stringify({from: highestIndexReceived + 1}) + '\n')
+    proxyEvent(filterStream, 'current')
+    var readMessage = {from: highestIndexReceived + 1}
+    newSocketStream.write(JSON.stringify(readMessage) + '\n')
     client.emit('ready')
   })
   .on('error', function (error) {
