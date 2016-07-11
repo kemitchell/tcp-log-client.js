@@ -21,6 +21,8 @@ function createReadStream (socket, from) {
       done()
     })
   )
+  returned.socket = socket
+  returned.from = from
   socket.write(JSON.stringify({from: from || 1}) + '\n')
   return returned
 }
@@ -29,6 +31,7 @@ function createWriteStream (socket) {
   var returned = through2.obj(function (chunk, _, done) {
     done(null, {id: uuid(), entry: chunk})
   })
+  returned.socket = socket
   pump(returned, ndjson.stringify(), socket)
   return returned
 }
