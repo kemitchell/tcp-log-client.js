@@ -61,6 +61,7 @@ function TCPLogClient (options) {
     client.connected = true
     client.emit('reconnect', number, delay)
   })
+  .on('backoff', function () { client.emit('backoff') })
   .on('disconnect', function (error) {
     if (client.readStream) client.readStream.unpipe()
     client.connected = false

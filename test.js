@@ -189,3 +189,26 @@ tape('read after reconnect', function (test) {
     })
   })
 })
+
+tape('fail', function (test) {
+  startTestServer(function (server, port, connections) {
+    var options = {
+      server: {port: port},
+      reconnect: {initialDelay: 1, maxDelay: 2, failAfter: 1}
+    }
+    var client = new TCPLogClient(options)
+    .connect()
+    .once('ready', function () {
+      server.close()
+      connections.forEach(function (connection) {
+        connection.destroy()
+      })
+    })
+    .once('fail', function () {
+      test.pass('fail')
+      client.destroy()
+      server.close()
+      test.end()
+    })
+  })
+})
