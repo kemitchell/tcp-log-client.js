@@ -142,7 +142,10 @@ TCPLogClient.prototype.destroy = function () {
 
 TCPLogClient.prototype.write = function (entry, callback) {
   if (!this.connected) {
-    throw new Error('Cannot write when disconnected.')
+    throw new Error(
+      'Cannot write when disconnected. ' +
+      'Check `client.connected` before calling `client.write()`.'
+    )
   } else {
     // Generate a UUID for the write. The server will echo the UUID back to
     // confirm the write.
