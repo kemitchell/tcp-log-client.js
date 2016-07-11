@@ -59,6 +59,7 @@ function TCPLogClient (options) {
       else client.emit('error', error)
     } else client.emit('error', error)
   })
+  .on('fail', function () { client.emit('fail') })
 
   client._reconnect.connect()
 
