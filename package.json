@@ -22,7 +22,7 @@
     "standard": "^7.1.2",
     "stream-set": "^1.1.0",
     "tape": "^4.6.0",
-    "tcp-log-server": "^6.0.0"
+    "tcp-log-server": "^7.0.0"
   },
   "keywords": [
     "TCP",
