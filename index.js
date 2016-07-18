@@ -69,8 +69,9 @@ function TCPLogClient (options) {
     if (!everConnected) client.emit('error', error)
     else {
       var code = error.code
-      if (code === 'EPIPE') failPendingWrites('Server closed the connection.')
-      else if (code === 'ECONNRESET') return
+      if (code === 'EPIPE') {
+        failPendingWrites('Server closed the connection.')
+      } else if (code === 'ECONNRESET') return
       else if (code === 'ECONNREFUSED') return
       else client.emit('error', error)
     }
@@ -148,8 +149,8 @@ TCPLogClient.prototype.write = function (entry, callback) {
       'Check `client.connected` before calling `client.write()`.'
     )
   } else {
-    // Generate a UUID for the write. The server will echo the UUID back to
-    // confirm the write.
+    // Generate a UUID for the write. The server will echo the UUID back
+    // to confirm the write.
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
     var message = JSON.stringify({id: id, entry: entry}) + '\n'
