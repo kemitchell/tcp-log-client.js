@@ -66,7 +66,12 @@ function TCPLogClient (options) {
     client.emit('ready')
   })
   .on('error', function (error) {
+    // If the client has never successfully connected to the server, it
+    // passes all errors through.
     if (!everConnected) client.emit('error', error)
+    // Once the client has successfully connected, it may encounter
+    // errors from which it can recover by reconnecting. Those errors
+    // aren't passed through.
     else {
       var code = error.code
       if (code === 'EPIPE') {
@@ -92,6 +97,7 @@ function TCPLogClient (options) {
   proxyEvent(reconnecter, 'backoff')
   proxyEvent(reconnecter, 'fail')
 
+  // Emit events from a stream the client manages as the client's own.
   function proxyEvent (emitter, event, optionalCallback) {
     emitter.on(event, function () {
       if (optionalCallback) optionalCallback.apply(client, arguments)
@@ -107,10 +113,10 @@ function TCPLogClient (options) {
         if (message.current === true) returned.emit('current')
         else if ('index' in message) {
           if ('error' in message) returned.emit('error', message)
-          // Pass through log entries.
+          // Pass log entries through.
           else if ('entry' in message) {
             this.push(message)
-          // Callback for confirmed writes.
+          // Call back for confirmed writes.
           } else if ('id' in message) {
             var id = message.id
             var callback = client._writeCallbacks[id]
