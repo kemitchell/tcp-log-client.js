@@ -10,6 +10,7 @@ var uuid = require('uuid').v4
 module.exports = TCPLogClient
 
 function TCPLogClient (options) {
+  /* istanbul ignore if */
   if (!(this instanceof TCPLogClient)) return new TCPLogClient(options)
 
   var client = this
