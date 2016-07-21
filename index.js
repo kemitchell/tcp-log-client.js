@@ -110,8 +110,11 @@ function TCPLogClient (options) {
       socket,
       ndjson.parse({strict: true}),
       through2.obj(function (message, _, done) {
+        /* istanbul ignore else */
         if (message.current === true) returned.emit('current')
         else if ('index' in message) {
+          /* istanbul ignore if */
+          /* istanbul ignore else */
           if ('error' in message) returned.emit('error', message)
           // Pass log entries through.
           else if ('entry' in message) {
@@ -122,12 +125,20 @@ function TCPLogClient (options) {
             var callback = client._writeCallbacks[id]
             delete client._writeCallbacks[id]
             callback(null, message.index)
-          }
-        }
+          /* istanbul ignore next */
+          } else emitBadMessageError(message)
+        } else emitBadMessageError(message)
         done()
       })
     )
     return returned
+  }
+
+  /* istanbul ignore next */
+  function emitBadMessageError (message) {
+    var error = new Error('invalid message')
+    error.message = message
+    client.emit('error', error)
   }
 
   function failPendingWrites (message) {
