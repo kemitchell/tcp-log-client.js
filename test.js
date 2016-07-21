@@ -258,6 +258,17 @@ tape('throws on write before connected', function (test) {
   })
 })
 
+tape('errors when can\'t connect', function (test) {
+  var options = {server: {port: 12345}}
+  var client = new TCPLogClient(options)
+  .once('error', function () {
+    test.pass('emitted error')
+    client.destroy()
+    test.end()
+  })
+  .connect()
+})
+
 function destroyAll (connections) {
   connections.forEach(function (connection) {
     connection.destroy()

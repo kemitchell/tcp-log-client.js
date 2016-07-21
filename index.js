@@ -39,7 +39,7 @@ function TCPLogClient (options) {
 
   // Whether the client has ever successfully connected to the server.
   // Affects error event handling.
-  var everConnected = true
+  var everConnected = false
 
   // A UUID-to-function map of callbacks for writes to the log. Used to
   // issue callbacks when the server responds with write confirmations.
