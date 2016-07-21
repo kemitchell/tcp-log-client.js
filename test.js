@@ -1,9 +1,9 @@
 var EventEmitter = require('events').EventEmitter
 var InMemoryBlobStore = require('abstract-blob-store')
+var SimpleLog = require('level-simple-log')
 var TCPLogClient = require('./')
 var asyncMapSeries = require('async.mapseries')
 var devnull = require('dev-null')
-var levelLogs = require('level-logs')
 var levelup = require('levelup')
 var logServerHandler = require('tcp-log-server')
 var memdown = require('memdown')
@@ -20,7 +20,7 @@ function startTestServer (callback) {
   var handler = logServerHandler(
     // Provide a pino logger, but pipe it to nowhere.
     pino({}, devnull()),
-    levelLogs(level, {valueEncoding: 'json'}),
+    new SimpleLog(level),
     // Use an in-memory blob store for testing.
     new InMemoryBlobStore(),
     new EventEmitter(),
