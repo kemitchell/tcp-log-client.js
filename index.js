@@ -70,6 +70,7 @@ function TCPLogClient (options) {
   .on('error', function (error) {
     // If the client has never successfully connected to the server, it
     // passes all errors through.
+    /* istanbul ignore next */
     if (!everConnected) {
       client.emit('error', error)
     // Once the client has successfully connected, it may encounter
