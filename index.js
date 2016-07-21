@@ -11,7 +11,9 @@ module.exports = TCPLogClient
 
 function TCPLogClient (options) {
   /* istanbul ignore if */
-  if (!(this instanceof TCPLogClient)) return new TCPLogClient(options)
+  if (!(this instanceof TCPLogClient)) {
+    return new TCPLogClient(options)
+  }
 
   var client = this
 
@@ -68,22 +70,29 @@ function TCPLogClient (options) {
   .on('error', function (error) {
     // If the client has never successfully connected to the server, it
     // passes all errors through.
-    if (!everConnected) client.emit('error', error)
+    if (!everConnected) {
+      client.emit('error', error)
     // Once the client has successfully connected, it may encounter
     // errors from which it can recover by reconnecting. Those errors
     // aren't passed through.
-    else {
+    } else {
       var code = error.code
       if (code === 'EPIPE') {
         failPendingWrites('Server closed the connection.')
-      } else if (code === 'ECONNRESET') return
-      else if (code === 'ECONNREFUSED') return
-      else client.emit('error', error)
+      } else if (code === 'ECONNRESET') {
+        return
+      } else if (code === 'ECONNREFUSED') {
+        return
+      } else {
+        client.emit('error', error)
+      }
     }
   })
 
   proxyEvent(reconnecter, 'disconnect', function () {
-    if (client.readStream) client.readStream.unpipe()
+    if (client.readStream) {
+      client.readStream.unpipe()
+    }
     client.connected = false
     failPendingWrites('Disconnected from server.')
   })
@@ -100,7 +109,9 @@ function TCPLogClient (options) {
   // Emit events from a stream the client manages as the client's own.
   function proxyEvent (emitter, event, optionalCallback) {
     emitter.on(event, function () {
-      if (optionalCallback) optionalCallback.apply(client, arguments)
+      if (optionalCallback) {
+        optionalCallback.apply(client, arguments)
+      }
       client.emit(event)
     })
   }
@@ -111,13 +122,15 @@ function TCPLogClient (options) {
       ndjson.parse({strict: true}),
       through2.obj(function (message, _, done) {
         /* istanbul ignore else */
-        if (message.current === true) returned.emit('current')
-        else if ('index' in message) {
+        if (message.current === true) {
+          returned.emit('current')
+        } else if ('index' in message) {
           /* istanbul ignore if */
           /* istanbul ignore else */
-          if ('error' in message) returned.emit('error', message)
+          if ('error' in message) {
+            returned.emit('error', message)
           // Pass log entries through.
-          else if ('entry' in message) {
+          } else if ('entry' in message) {
             this.push(message)
           // Call back for confirmed writes.
           } else if ('id' in message) {
@@ -126,8 +139,12 @@ function TCPLogClient (options) {
             delete client._writeCallbacks[id]
             callback(null, message.index)
           /* istanbul ignore next */
-          } else emitBadMessageError(message)
-        } else emitBadMessageError(message)
+          } else {
+            emitBadMessageError(message)
+          }
+        } else {
+          emitBadMessageError(message)
+        }
         done()
       })
     )
