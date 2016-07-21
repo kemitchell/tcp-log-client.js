@@ -29,9 +29,13 @@ function startTestServer (callback) {
   // Track connections so tests can close to simulate problems.
   var connections = streamSet()
   net.createServer()
-  .on('connection', function (socket) { connections.add(socket) })
+  .on('connection', function (socket) {
+    connections.add(socket)
+  })
   .on('connection', handler)
-  .once('close', function () { level.close() })
+  .once('close', function () {
+    level.close()
+  })
   .listen(0, function () {
     callback(this, this.address().port, connections)
   })
@@ -62,7 +66,31 @@ tape('read and write from same client', function (test) {
           test.end()
         }
       })
-      entries.forEach(function (entry) { client.write(entry) })
+      entries.forEach(function (entry) {
+        client.write(entry)
+      })
+    })
+  })
+})
+
+tape('construct withotu new', function (test) {
+  startTestServer(function (server, port) {
+    var received = []
+    var client = TCPLogClient({server: {port: port}})
+    .connect()
+    .once('ready', function () {
+      client.readStream.on('data', function (data) {
+        received.push(data.entry)
+        if (received.length === entries.length) {
+          test.deepEqual(received, entries, 'received entries')
+          client.destroy()
+          server.close()
+          test.end()
+        }
+      })
+      entries.forEach(function (entry) {
+        client.write(entry)
+      })
     })
   })
 })
@@ -111,7 +139,9 @@ tape('read another client\'s writes', function (test) {
             test.end()
           }
         })
-        entries.forEach(function (entry) { writer.write(entry) })
+        entries.forEach(function (entry) {
+          writer.write(entry)
+        })
       })
     })
   })
@@ -126,7 +156,9 @@ tape('read another client\'s previous writes', function (test) {
       var writer = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
-        entries.forEach(function (entry) { writer.write(entry) })
+        entries.forEach(function (entry) {
+          writer.write(entry)
+        })
         setImmediate(function () {
           var received = []
           reader.readStream.on('data', function (data) {
@@ -151,7 +183,9 @@ tape('current event', function (test) {
     var writer = new TCPLogClient(options)
     .connect()
     .once('ready', function () {
-      entries.forEach(function (entry) { writer.write(entry) })
+      entries.forEach(function (entry) {
+        writer.write(entry)
+      })
       var reader = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
@@ -172,7 +206,9 @@ tape('reconnect', function (test) {
     var options = {server: {port: port}}
     var client = new TCPLogClient(options)
     .connect()
-    .once('ready', function () { destroyAll(connections) })
+    .once('ready', function () {
+      destroyAll(connections)
+    })
     .once('reconnect', function () {
       test.pass('reconnected')
       client.destroy()
@@ -236,7 +272,9 @@ tape('destroy ends read stream', function (test) {
     var options = {server: {port: port}}
     var client = new TCPLogClient(options)
     .connect()
-    .once('ready', function () { client.destroy() })
+    .once('ready', function () {
+      client.destroy()
+    })
     client.readStream.once('finish', function () {
       test.pass('stream ended')
       server.close()
@@ -250,7 +288,9 @@ tape('throws on write before connected', function (test) {
     var options = {server: {port: port}}
     var client = new TCPLogClient(options)
     test.equal(client.connected, false)
-    test.throws(function () { client.write(entries[0]) })
+    test.throws(function () {
+      client.write(entries[0])
+    })
     server.close()
     test.end()
   })
