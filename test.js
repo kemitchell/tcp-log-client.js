@@ -247,6 +247,17 @@ tape('destroy ends read stream', function (test) {
   })
 })
 
+tape('throws on write before connected', function (test) {
+  startTestServer(function (server, port, connections) {
+    var options = {server: {port: port}}
+    var client = new TCPLogClient(options)
+    test.equal(client.connected, false)
+    test.throws(function () { client.write(entries[0]) })
+    server.close()
+    test.end()
+  })
+})
+
 function destroyAll (connections) {
   connections.forEach(function (connection) {
     connection.destroy()
