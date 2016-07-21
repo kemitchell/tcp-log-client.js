@@ -91,9 +91,7 @@ function TCPLogClient (options) {
   })
 
   proxyEvent(reconnecter, 'disconnect', function () {
-    if (client.readStream) {
-      client.readStream.unpipe()
-    }
+    client.readStream.unpipe()
     client.connected = false
     failPendingWrites('Disconnected from server.')
   })

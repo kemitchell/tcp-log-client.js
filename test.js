@@ -82,12 +82,10 @@ tape('writes call back with indices', function (test) {
       })
       client.readStream.on('data', function (data) {
         received.push(data)
-        if (received.length === expected.length) {
-          test.deepEqual(received, expected, 'received entries')
-          client.destroy()
-          server.close()
-          test.end()
-        }
+        test.deepEqual(received, expected, 'received entries')
+        client.destroy()
+        server.close()
+        test.end()
       })
     })
   })
