@@ -10,6 +10,9 @@
     "through2": "^2.0.1",
     "uuid": "^2.0.2"
   },
+  "files": [
+    "index.js"
+  ],
   "devDependencies": {
     "abstract-blob-store": "^3.2.0",
     "async.mapseries": "^0.5.2",
