@@ -23,6 +23,7 @@ function TCPLogClient (options) {
   var highestIndexReceived = Number(options.from) || 0
   var keepAlive = Boolean(options.keepalive) || true
   var noDelay = Boolean(options.noDelay) || true
+  var batchSize = Number(options.batchSize) || 5
 
   // Whether the client is currently connected.
   client.connected = false
@@ -63,8 +64,7 @@ function TCPLogClient (options) {
     client._socketStream = newSocketStream
     // Issue a read request from one past the last-seen index.
     proxyEvent(filterStream, 'current')
-    var readMessage = {from: highestIndexReceived + 1}
-    newSocketStream.write(JSON.stringify(readMessage) + '\n')
+    pullData()
     client.emit('ready')
   })
   .on('error', function (error) {
@@ -115,6 +115,14 @@ function TCPLogClient (options) {
     })
   }
 
+  function pullData () {
+    var readMessage = {
+      from: highestIndexReceived + 1,
+      read: batchSize
+    }
+    client._socketStream.write(JSON.stringify(readMessage) + '\n')
+  }
+
   function createReadStream (socket) {
     var returned = pump(
       socket,
@@ -140,6 +148,14 @@ function TCPLogClient (options) {
           /* istanbul ignore next */
           } else {
             emitBadMessageError(message)
+          }
+        } else if ('head' in message) {
+          if (client.readStream._readableState === false) {
+            client.readStream.once('drain', function () {
+              pullData()
+            })
+          } else {
+            pullData()
           }
         } else {
           emitBadMessageError(message)
