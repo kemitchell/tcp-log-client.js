@@ -49,8 +49,8 @@ function TCPLogClient (options) {
   // Create a reconnect-core instance for TCP connection to server.
   var reconnecter = client._reconnecter = reconnect(function () {
     return net.connect(serverOptions)
-    .setKeepAlive(keepAlive)
-    .setNoDelay(noDelay)
+      .setKeepAlive(keepAlive)
+      .setNoDelay(noDelay)
   })(reconnectOptions, function (newSocketStream) {
     // Create a stream to filter out entries for reading.
     var filterStream = createReadStream(newSocketStream)
@@ -67,28 +67,28 @@ function TCPLogClient (options) {
     pullData()
     client.emit('ready')
   })
-  .on('error', function (error) {
-    // If the client has never successfully connected to the server, it
-    // passes all errors through.
-    /* istanbul ignore next */
-    if (!everConnected) {
-      client.emit('error', error)
-    // Once the client has successfully connected, it may encounter
-    // errors from which it can recover by reconnecting. Those errors
-    // aren't passed through.
-    } else {
-      var code = error.code
-      if (code === 'EPIPE') {
-        failPendingWrites('Server closed the connection.')
-      } else if (code === 'ECONNRESET') {
-        return
-      } else if (code === 'ECONNREFUSED') {
-        return
-      } else {
+    .on('error', function (error) {
+      // If the client has never successfully connected to the server,
+      // it passes all errors through.
+      /* istanbul ignore next */
+      if (!everConnected) {
         client.emit('error', error)
+      // Once the client has successfully connected, it may encounter
+      // errors from which it can recover by reconnecting. Those errors
+      // aren't passed through.
+      } else {
+        var code = error.code
+        if (code === 'EPIPE') {
+          failPendingWrites('Server closed the connection.')
+        } else if (code === 'ECONNRESET') {
+          // pass
+        } else if (code === 'ECONNREFUSED') {
+          // pass
+        } else {
+          client.emit('error', error)
+        }
       }
-    }
-  })
+    })
 
   proxyEvent(reconnecter, 'disconnect', function () {
     client.readStream.unpipe()

@@ -21,7 +21,7 @@
     "memdown": "^1.2.0",
     "pino": "^2.7.2",
     "sha256": "^0.2.0",
-    "standard": "^7.1.2",
+    "standard": "^10.0.2",
     "stream-set": "^1.1.0",
     "tape": "^4.6.0",
     "tcp-log-server": "^9.0.0"

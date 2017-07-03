@@ -17,21 +17,21 @@ var client = new TCPLogClient({
   // Stop trying to reconnect and fail after 5 attempts.
   reconnect: {failAfter: 5}
 })
-.on('error', function (error) {
-  console.error(error)
-})
-.on('fail', function () {
-  console.error('Failed to reconnect.')
-})
-.once('ready', function () {
-  if (client.connected) {
-    client.write({example: 'entry'}, function (error, index) {
-      console.log('New entry index is %d', index)
-      // Permanently disconnect and end `client.readStream`.
-      client.destroy()
-    })
-  }
-})
+  .on('error', function (error) {
+    console.error(error)
+  })
+  .on('fail', function () {
+    console.error('Failed to reconnect.')
+  })
+  .once('ready', function () {
+    if (client.connected) {
+      client.write({example: 'entry'}, function (error, index) {
+        console.log('New entry index is %d', index)
+        // Permanently disconnect and end `client.readStream`.
+        client.destroy()
+      })
+    }
+  })
 
 // Readable stream of log entries.
 // Entries added with `client.write()` will be streamed, too.
