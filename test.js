@@ -14,9 +14,8 @@ var streamSet = require('stream-set')
 var tape = require('tape')
 
 function startTestServer (ready) {
-  memdown.clearGlobalStore()
   // Use an in-memdown LevelUP storage back-end for testing.
-  var level = levelup('', {db: memdown})
+  var level = levelup(memdown())
   var handler = logServerHandler(
     // Provide a pino logger, but pipe it to nowhere.
     pino({}, devnull()),
