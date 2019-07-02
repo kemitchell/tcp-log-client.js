@@ -19,7 +19,7 @@
     "level-simple-log": "^3.0.0",
     "levelup": "^4.1.0",
     "memdown": "^4.1.0",
-    "pino": "^2.7.2",
+    "pino": "^5.12.6",
     "sha256": "^0.2.0",
     "standard": "^10.0.2",
     "stream-set": "^1.1.0",
