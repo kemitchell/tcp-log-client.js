@@ -1,7 +1,7 @@
 {
   "name": "tcp-log-client",
   "description": "stream and write tcp-log-server entries",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "author": "Kyle E. Mitchell <kyle@kemitchell.com> (https://kemitchell.com/)",
   "dependencies": {
     "ndjson": "^1.4.3",
