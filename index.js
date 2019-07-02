@@ -60,7 +60,7 @@ function TCPLogClient (options) {
       client._filterStream.unpipe()
     }
     client._filterStream = filterStream
-    filterStream.pipe(client.readStream, {end: false})
+    filterStream.pipe(client.readStream, { end: false })
     client._socketStream = newSocketStream
     // Issue a read request from one past the last-seen index.
     proxyEvent(filterStream, 'current')
@@ -126,7 +126,7 @@ function TCPLogClient (options) {
   function createReadStream (socket) {
     var returned = pump(
       socket,
-      ndjson.parse({strict: true}),
+      ndjson.parse({ strict: true }),
       through2.obj(function (message, _, done) {
         /* istanbul ignore else */
         if (message.current === true) {
@@ -202,7 +202,7 @@ TCPLogClient.prototype.write = function (entry, callback) {
     // to confirm the write.
     var id = uuid()
     this._writeCallbacks[id] = callback || noop
-    var message = JSON.stringify({id: id, entry: entry}) + '\n'
+    var message = JSON.stringify({ id: id, entry: entry }) + '\n'
     return this._socketStream.write(message)
   }
 }

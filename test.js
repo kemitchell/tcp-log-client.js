@@ -48,12 +48,12 @@ tape('start a test server', function (test) {
   })
 })
 
-var entries = [{a: 1}, {b: 2}, {c: 3}]
+var entries = [{ a: 1 }, { b: 2 }, { c: 3 }]
 
 tape('read and write from same client', function (test) {
   startTestServer(function (server, port) {
     var received = []
-    var client = new TCPLogClient({server: {port: port}})
+    var client = new TCPLogClient({ server: { port: port } })
       .connect()
       .once('ready', function () {
         client.readStream.on('data', function (data) {
@@ -75,7 +75,7 @@ tape('read and write from same client', function (test) {
 tape('construct withotu new', function (test) {
   startTestServer(function (server, port) {
     var received = []
-    var client = TCPLogClient({server: {port: port}})
+    var client = TCPLogClient({ server: { port: port } })
       .connect()
       .once('ready', function () {
         client.readStream.on('data', function (data) {
@@ -96,7 +96,7 @@ tape('construct withotu new', function (test) {
 
 tape('writes call back with indices', function (test) {
   startTestServer(function (server, port) {
-    var client = new TCPLogClient({server: {port: port}})
+    var client = new TCPLogClient({ server: { port: port } })
       .connect()
       .once('ready', function () {
         var expected = []
@@ -104,7 +104,7 @@ tape('writes call back with indices', function (test) {
         asyncMapSeries(entries, function (entry, done) {
           client.write(entry, function (error, index) {
             test.ifError(error)
-            expected.push({index: index, entry: entry})
+            expected.push({ index: index, entry: entry })
           })
         })
         client.readStream.on('data', function (data) {
@@ -120,35 +120,35 @@ tape('writes call back with indices', function (test) {
 
 tape('read another client\'s writes', function (test) {
   startTestServer(function (server, port) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var reader = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
         var writer = new TCPLogClient(options)
-        .connect()
-        .once('ready', function () {
-          var received = []
-          reader.readStream.on('data', function (data) {
-            received.push(data.entry)
-            if (received.length === entries.length) {
-              test.deepEqual(received, entries, 'received entries')
-              reader.destroy()
-              writer.destroy()
-              server.close()
-              test.end()
-            }
+          .connect()
+          .once('ready', function () {
+            var received = []
+            reader.readStream.on('data', function (data) {
+              received.push(data.entry)
+              if (received.length === entries.length) {
+                test.deepEqual(received, entries, 'received entries')
+                reader.destroy()
+                writer.destroy()
+                server.close()
+                test.end()
+              }
+            })
+            entries.forEach(function (entry) {
+              writer.write(entry)
+            })
           })
-          entries.forEach(function (entry) {
-            writer.write(entry)
-          })
-        })
       })
   })
 })
 
 tape('read another client\'s previous writes', function (test) {
   startTestServer(function (server, port) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var reader = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
@@ -178,7 +178,7 @@ tape('read another client\'s previous writes', function (test) {
 
 tape('current event', function (test) {
   startTestServer(function (server, port) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var writer = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
@@ -202,7 +202,7 @@ tape('current event', function (test) {
 
 tape('reconnect', function (test) {
   startTestServer(function (server, port, connections) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var client = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
@@ -219,7 +219,7 @@ tape('reconnect', function (test) {
 
 tape('read after reconnect', function (test) {
   startTestServer(function (server, port, connections) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var received = []
     var client = new TCPLogClient(options)
       .connect()
@@ -248,8 +248,8 @@ tape('read after reconnect', function (test) {
 tape('fail', function (test) {
   startTestServer(function (server, port, connections) {
     var options = {
-      server: {port: port},
-      reconnect: {initialDelay: 1, maxDelay: 2, failAfter: 1}
+      server: { port: port },
+      reconnect: { initialDelay: 1, maxDelay: 2, failAfter: 1 }
     }
     var client = new TCPLogClient(options)
       .connect()
@@ -268,7 +268,7 @@ tape('fail', function (test) {
 
 tape('destroy ends read stream', function (test) {
   startTestServer(function (server, port, connections) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var client = new TCPLogClient(options)
       .connect()
       .once('ready', function () {
@@ -284,7 +284,7 @@ tape('destroy ends read stream', function (test) {
 
 tape('throws on write before connected', function (test) {
   startTestServer(function (server, port, connections) {
-    var options = {server: {port: port}}
+    var options = { server: { port: port } }
     var client = new TCPLogClient(options)
     test.equal(client.connected, false)
     test.throws(function () {
@@ -296,7 +296,7 @@ tape('throws on write before connected', function (test) {
 })
 
 tape('errors when can\'t connect', function (test) {
-  var options = {server: {port: 12345}}
+  var options = { server: { port: 12345 } }
   var client = new TCPLogClient(options)
     .once('error', function () {
       test.pass('emitted error')
